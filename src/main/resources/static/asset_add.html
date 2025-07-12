@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>
+        添加资产
+    </title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="/css/main.css" media="all">
+    <script type="text/javascript" src="/lib/loading/okLoading.js"></script>
+    <!-- 引入ElementUI样式 -->
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+<div id="app">
+<div class="x-nav">
+            <span class="layui-breadcrumb">
+              <a><cite>首页</cite></a>
+              <a><cite>房产管理</cite></a>
+              <a><cite>{{title}}</cite></a>
+            </span>
+    <a class="layui-btn layui-btn-small" style="line-height:1.6em;margin-top:3px;float:right"  href="javascript:location.replace(location.href);" title="刷新"><i class="layui-icon" style="line-height:30px">ဂ</i></a>
+</div>
+<div class="x-body">
+    <el-form :model="asset" :rules="rules" ref="assetFormRef" label-width="120px" class="demo-ruleForm">
+        <el-form-item label="所属小区" prop="communityName">
+            <el-input v-model="asset.communityName" placeholder="请输入小区名称"></el-input>
+        </el-form-item>
+        <el-form-item label="资产编号" prop="code">
+            <el-input v-model="asset.code" placeholder="请输入资产编号"></el-input>
+        </el-form-item>
+        <el-form-item label="资产名称" prop="name">
+            <el-input v-model="asset.name" placeholder="请输入资产名称"></el-input>
+        </el-form-item>
+        <el-form-item label="资产描述" prop="description">
+            <el-input
+                    type="textarea"
+                    :rows="2"
+                    placeholder="请输入描述，并控制在80个汉字以内"
+                    v-model="asset.description">
+            </el-input>
+        </el-form-item>
+        <el-form-item>
+            <el-button type="primary" @click="save()" style="text-align: center">保存</el-button>
+            <el-button @click="clearAll()" style="text-align: center">重置</el-button>
+        </el-form-item>
+    </el-form>
+</div>
+</div>
+<br/><br/><br/><br/>
+<script src="lib/layui/layui.js" charset="utf-8"></script>
+<script src="js/x-layui.js" charset="utf-8"></script>
+<script src="/js/vue.js" charset="utf-8"></script>
+<script src="/js/index.js"></script>
+<script src="/js/axios.js" charset="utf-8"></script>
+<script type="text/javascript">
+    var app = new Vue({
+        el:"#app",
+        data:{
+            title:"添加资产",
+            asset:{id:""},
+            fileList:[],
+            rules: {
+                communityName: [
+                    { required: true, message: '请输入所属小区名称', trigger: 'blur' }
+                ],
+                code: [
+                    { required: true, message: '请输入资产编号', trigger: 'blur' }
+                ],
+                name: [
+                    { required: true, message: '请输入资产名称', trigger: 'blur' }
+                ],
+                description: [
+                    { required: false, message: '请输入资产描述信息', trigger: 'blur' },
+                    { max: 160, message: '描述长度大于80个汉字', trigger: 'blur'}
+                ]
+            }
+        },
+        methods:{
+            //表达重置
+            clearAll() {
+                this.$refs.assetFormRef.resetFields();
+                if(this.fileList.length>0) {
+                    this.handleRemove();
+                }
+            },
+            // 1.保存资产信息的方法
+            save() {
+                var method = "";
+
+                // 3.1 判断是否有资产id，执行添加/修改方法
+                if (this.asset.id != null) {
+                    method = "update"
+                } else {
+                    method = "add"
+                }
+                // 3.2 发送 axios请求
+                axios.post("/asset/" + method, this.asset).then((response) => {
+                    if (response.data.result) {
+                        this.$message({
+                            message: '保存成功！',
+                            type: 'success'
+                        });
+                    } else {
+                        this.$message({
+                            message: '保存失败！' + response.message,
+                            type: 'error'
+                        });
+                    }
+                });
+            },
+            // 2.根据 id 获取资产对象
+            findById(){
+                axios.get("/asset/get/by/id?id="+this.asset.id).then((res)=>{
+                    this.asset = res.data.data;
+                });
+            },
+            // 3.根据参数名 获取参数
+            getQueryString(name){
+                let reg = `(^|&)${name}=([^&]*)(&|$)`
+                let r = window.location.search.substr(1).match(reg);
+                if (r != null) return unescape(r[2]); return null;
+            }
+        },
+        created:function(){
+            layui.use(['element','layer','form'], function(){
+                $ = layui.jquery;//jquery
+                lement = layui.element();//面包导航
+                layer = layui.layer;//弹出层
+                form = layui.form();
+                okLoading.close($);
+            });
+            //获取父页面传递参数，资产ID
+            this.asset.id = this.getQueryString("id");
+            //根据资产ID获取资产对象，进行数据回显
+            if(this.asset.id != null && this.asset.id != ''){
+                this.title="修改资产";
+                this.findById();
+            }
+        }
+    });
+</script>
+</body>
+</html>

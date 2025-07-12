@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>
+        赋予角色
+    </title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="css/main.css" media="all">
+    <script type="text/javascript" src="lib/loading/okLoading.js"></script>
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+<div id="app">
+    <div class="x-nav">
+            <span class="layui-breadcrumb">
+              <a><cite>首页</cite></a>
+              <a><cite>用户管理</cite></a>
+              <a><cite>{{title}}</cite></a>
+            </span>
+        <a class="layui-btn layui-btn-small" style="line-height:1.6em;margin-top:3px;float:right"
+           href="javascript:location.replace(location.href);" title="刷新"><i class="layui-icon" style="line-height:30px">ဂ</i></a>
+    </div>
+    <div class="x-body">
+        <el-form :model="admin" ref="adminFormRef" label-width="120px" class="demo-ruleForm" style="text-align: center;">
+
+            <el-transfer
+                    style="text-align: left; display: inline-block"
+                    v-model="assignedRoleList"
+                    :data="unassignedRoleList"
+                    filterable
+                    :titles="['未分配角色', '已分配角色']"
+                    :button-texts="['回收', '赋予']"
+                    @change="handleTransferChange"
+            ></el-transfer>
+
+        </el-form>
+    </div>
+</div>
+<br/><br/><br/><br/>
+<script src="lib/layui/layui.js" charset="utf-8"></script>
+<script src="js/x-layui.js" charset="utf-8"></script>
+<script src="/js/vue.js" charset="utf-8"></script>
+<script src="/js/index.js"></script>
+<script src="/js/axios.js" charset="utf-8"></script>
+<script type="text/javascript">
+    var app = new Vue({
+        el: "#app",
+        data: {
+            title: "分配角色",
+            admin: {id: ""},
+            unassignedRoleList: [], //未分配角色
+            assignedRoleList: [],//已分配角色
+        },
+        methods: {
+            //表达重置
+            clearAll() {
+                this.$refs.adminFormRef.resetFields();
+                if (this.fileList.length > 0) {
+                    this.handleRemove();
+                }
+            },
+            save() {
+                var method = "";
+
+                // 3.1 判断是否有用户id，执行添加/修改方法
+                if (this.admin.id != null) {
+                    method = "update"
+                } else {
+                    method = "add"
+                }
+                // 3.2 发送 axios请求
+                axios.post("/admin/" + method, this.admin).then((response) => {
+                    if (response.data.result) {
+                        this.$message({
+                            message: '保存成功！',
+                            type: 'success'
+                        });
+                    } else {
+                        this.$message({
+                            message: '保存失败！' + response.message,
+                            type: 'error'
+                        });
+                    }
+                });
+            },
+            // 1.获取所有查询的角色信息
+            getAllRole() {
+                // 发送 axios请求，获取所有查询的角色信息
+                axios.get("/role/get/all").then((res) => {
+                    res.data.data.forEach(unassignedRole => {
+                        let unassignedRoleList_res = {}
+                        this.$set(unassignedRoleList_res, 'key', this.unassignedRoleList.length + 1)
+                        this.$set(unassignedRoleList_res, 'label', unassignedRole.name)
+                        this.$set(unassignedRoleList_res, 'id', unassignedRole.id)
+                        this.unassignedRoleList.push(unassignedRoleList_res)
+                    });
+                });
+            },
+            // 2.根据 id，获取已分配角色数据
+            getAssignedRoleById() {
+                axios.get("/admin/get/assigned/role/by/id?id=" + this.admin.id).then((res) => {
+                    // 2.1 遍历响应的已分配角色列表
+                    res.data.data.forEach(assignedRole => {
+                        // 2.2 遍历所有分配的角色
+                        this.unassignedRoleList.forEach(unassignedRole => {
+                            // 2.3 如果两数组的角色id相等，添加相应下标 到已分配角色数组（根据下标从左边拉到右边）
+                            if (assignedRole.id === unassignedRole.id) {
+                                this.assignedRoleList.unshift(unassignedRole.key);
+                            }
+                        });
+                    });
+
+                });
+            },
+            // 3.穿梭框数据改变时，执行的方法
+            handleTransferChange(value, direction, keyArr) {
+                // value为选中值，direction为方向left or right，keyArr为右边框的key数组
+                switch (direction) {
+                    case 'left': // 回收角色
+                        keyArr.forEach((item, index) => { // item:保存的角色id,即"id"，index:数据下标,即"key"
+                            // 提交后台事件，elementdata[index].id即为选中的其中一个元素的id，循环获得所有
+                            axios.get("/role/remove/assigned/role/by/id?adminId="+this.admin.id+"&roleId="+item)
+                                .then((response) => {
+                                    if (!response.data.result) {
+                                        layer.msg("回收角色失败！原因:" + response.data.message);
+                                    }
+                                });
+                        })
+                        break
+                    case 'right': // 赋予角色
+                        keyArr.forEach((item, index) => {
+                            // 提交后台事件事件
+                            axios.get("/role/add/unassigned/role/by/id?adminId="+this.admin.id+"&roleId="+item)
+                                .then((response) => {
+                                    if (!response.data.result) {
+                                        layer.msg("赋予角色失败！原因:" + response.data.message);
+                                    }
+                                });
+                        })
+                        break
+                }
+            },
+            // 3.根据参数名 获取参数
+            getQueryString(name) {
+                let reg = `(^|&)${name}=([^&]*)(&|$)`
+                let r = window.location.search.substr(1).match(reg);
+                if (r != null) return unescape(r[2]);
+                return null;
+            }
+        },
+        created: function () {
+            layui.use(['element', 'layer', 'form'], function () {
+                $ = layui.jquery;//jquery
+                lement = layui.element();//面包导航
+                layer = layui.layer;//弹出层
+                form = layui.form();
+                okLoading.close($);
+            });
+            // 获取父页面传递参数，用户ID
+            this.admin.id = this.getQueryString("id");
+            // 根据用户id，获取用户的角色信息
+            if (this.admin.id != null && this.admin.id != '') {
+                this.getAllRole();
+                this.getAssignedRoleById();
+            }
+        }
+    });
+</script>
+</body>
+</html>

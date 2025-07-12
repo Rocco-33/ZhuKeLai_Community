@@ -1,0 +1,49 @@
+ # 忽略所有target目录
+ target/
+ **/target/
+ # 忽略IntelliJ IDEA相关文件
+ .idea/
+ *.iml
+ *.ipr
+ *.iws
+ # 忽略Eclipse相关文件
+ .settings/
+ .project
+ .classpath
+ .metadata
+ # 忽略NetBeans
+ nbproject/
+ nbactions.xml
+ # 忽略VS Code
+ .vscode/
+ # 忽略日志文件
+ *.log
+ # 忽略临时文件
+ *.tmp
+ *.bak
+ # 忽略系统文件
+ .DS_Store
+ Thumbs.db
+ # 忽略编译输出
+ bin/
+ build/
+ out/
+ classes/
+ # 忽略Maven的日志文件
+ mvnw
+ mvnw.cmd
+ .mvn/
+ # 忽略依赖管理（如Gradle）
+ .gradle/
+ gradle-app.setting
+ build/
+ gradle/
+ gradlew
+ gradlew.bat
+ # 忽略Spring Boot的配置
+ application*.properties
+ application*.yml
+ # 忽略打包文件
+ *.jar
+ *.war
+ *.ear

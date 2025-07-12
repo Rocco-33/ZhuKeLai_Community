@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>
+        添加房产
+    </title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="/css/main.css" media="all">
+    <script type="text/javascript" src="/lib/loading/okLoading.js"></script>
+    <!-- 引入ElementUI样式 -->
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+<div id="app">
+    <div class="x-nav">
+            <span class="layui-breadcrumb">
+              <a><cite>首页</cite></a>
+              <a><cite>房产管理</cite></a>
+              <a><cite>{{title}}</cite></a>
+            </span>
+        <a class="layui-btn layui-btn-small" style="line-height:1.6em;margin-top:3px;float:right"  href="javascript:location.replace(location.href);" title="刷新"><i class="layui-icon" style="line-height:30px">ဂ</i></a>
+    </div>
+    <div class="x-body">
+        <el-form :model="house" :rules="rules" ref="houseFormRef" label-width="120px" class="demo-ruleForm">
+            <el-form-item label="所属小区" prop="communityName">
+                <el-input v-model="house.communityName" placeholder="请输入小区名称"></el-input>
+            </el-form-item>
+            <el-form-item label="所属楼栋" prop="buildingName">
+                <el-input v-model="house.buildingName" placeholder="请输入楼栋名称"></el-input>
+            </el-form-item>
+            <el-form-item label="房产名称" prop="name">
+                <el-input v-model="house.name" placeholder="请输入房产名称"></el-input>
+            </el-form-item>
+            <el-form-item label="业主姓名" prop="ownerName">
+                <el-input v-model="house.ownerName" placeholder="请输入业主名称"></el-input>
+            </el-form-item>
+            <el-form-item label="联系方式" prop="telephone">
+                <el-input v-model="house.telephone" placeholder="请输入电话号码"></el-input>
+            </el-form-item>
+            <el-form-item label="房间数" prop="roomNum">
+                <el-input v-model="house.roomNum" placeholder="请输入数字"></el-input>
+            </el-form-item>
+            <el-form-item label="所在单元" prop="unit">
+                <el-input v-model="house.unit" placeholder="请输入数字"></el-input>
+            </el-form-item>
+            <el-form-item label="所在楼层" prop="floor">
+                <el-input v-model="house.floor" placeholder="请输入数字"></el-input>
+            </el-form-item>
+            <el-form-item label="入住时间" prop="liveTime">
+                <el-date-picker
+                        v-model="house.liveTime"
+                        type="date"
+                        placeholder="选择入住日期">
+                </el-date-picker>
+            </el-form-item>
+            <el-form-item label="描述" prop="description">
+                <el-input
+                        type="textarea"
+                        :rows="2"
+                        placeholder="请输入描述，并控制在80个汉字以内"
+                        v-model="house.description">
+                </el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="save()" style="text-align: center">保存</el-button>
+                <el-button @click="clearAll()" style="text-align: center">重置</el-button>
+            </el-form-item>
+        </el-form>
+    </div>
+</div>
+<script src="lib/layui/layui.js" charset="utf-8"></script>
+<script src="js/x-layui.js" charset="utf-8"></script>
+<script src="/js/vue.js" charset="utf-8"></script>
+<script src="/js/index.js"></script>
+<script src="/js/axios.js" charset="utf-8"></script>
+<script type="text/javascript">
+    var app = new Vue({
+        el:"#app",
+        data:{
+            title:"添加房产",
+            house:{id:""},
+            fileList:[],
+            rules: {
+                communityName: [
+                    { required: true, message: '请输入所属小区', trigger: 'blur' }
+                ],
+                buildingName: [
+                    { required: true, message: '请输入所属楼栋', trigger: 'blur' }
+                ],
+                name: [
+                    { required: true, message: '请输入房产名称', trigger: 'blur' }
+                ],
+                ownerName: [
+                    { required: true, message: '请输入业主姓名', trigger: 'blur' }
+                ],
+                telephone: [
+                    { required: true, message: '请输入联系方式', trigger: 'blur' }
+                ],
+                roomNum: [
+                    { required: true, message: '请输入房间数', trigger: 'blur' }
+                ],
+                unit: [
+                    { required: true, message: '请输入所在单元', trigger: 'blur' }
+                ],
+                floor: [
+                    { required: true, message: '请输入所在楼层', trigger: 'blur' }
+                ],
+                liveTime: [
+                    { required: true, message: '请选择入住日期', trigger: 'blur' }
+                ],
+                description: [
+                    { required: false, message: '请输入描述', trigger: 'blur' },
+                    { max: 160, message: '描述大于80个汉字', trigger: 'blur'}
+                ]
+            }
+        },
+        methods:{
+            //表达重置
+            clearAll() {
+                this.$refs.houseFormRef.resetFields();
+                if(this.fileList.length>0) {
+                    this.handleRemove();
+                }
+            },
+            // 1.保存房产信息的方法
+            save() {
+                var method = "";
+
+                // 3.1 判断是否有房产id，执行添加/修改方法
+                if (this.house.id != null) {
+                    method = "update"
+                } else {
+                    method = "add"
+                }
+                // 3.2 发送 axios请求
+                axios.post("/house/" + method, this.house).then((response) => {
+                    if (response.data.result) {
+                        this.$message({
+                            message: '保存成功！',
+                            type: 'success'
+                        });
+                    } else {
+                        this.$message({
+                            message: '保存失败！' + response.message,
+                            type: 'error'
+                        });
+                    }
+                });
+            },
+            // 2.根据 id 获取房产对象
+            findById(){
+                axios.get("/house/get/by/id?id="+this.house.id).then((res)=>{
+                    this.house = res.data.data;
+                });
+            },
+            // 3.根据参数名 获取参数
+            getQueryString(name){
+                let reg = `(^|&)${name}=([^&]*)(&|$)`
+                let r = window.location.search.substr(1).match(reg);
+                if (r != null) return unescape(r[2]); return null;
+            }
+        },
+        created:function(){
+            layui.use(['element','layer','form'], function(){
+                $ = layui.jquery;//jquery
+                lement = layui.element();//面包导航
+                layer = layui.layer;//弹出层
+                form = layui.form();
+                okLoading.close($);
+            });
+            //获取父页面传递参数，房产ID
+            this.house.id = this.getQueryString("id");
+            //根据房产ID获取房产对象，进行数据回显
+            if(this.house.id != null && this.house.id != ''){
+                this.title="修改房产";
+                this.findById();
+            }
+        }
+    });
+</script>
+</body>
+</html>

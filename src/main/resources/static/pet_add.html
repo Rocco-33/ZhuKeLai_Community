@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>
+        添加宠物
+    </title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="/css/main.css" media="all">
+    <script type="text/javascript" src="/lib/loading/okLoading.js"></script>
+    <!-- 引入ElementUI样式 -->
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+<div id="app">
+    <div class="x-nav">
+            <span class="layui-breadcrumb">
+              <a><cite>首页</cite></a>
+              <a><cite>业主信息管理</cite></a>
+              <a><cite>{{title}}</cite></a>
+            </span>
+        <a class="layui-btn layui-btn-small" style="line-height:1.6em;margin-top:3px;float:right"
+           href="javascript:location.replace(location.href);" title="刷新"><i class="layui-icon" style="line-height:30px">ဂ</i></a>
+    </div>
+    <div class="x-body">
+        <el-form :model="pet" :rules="rules" ref="petFormRef" label-width="120px" class="demo-ruleForm">
+            <el-form-item label="所属人员" prop="ownerName">
+                <el-input v-model="pet.ownerName" placeholder="请输入人员姓名"></el-input>
+            </el-form-item>
+            <el-form-item label="宠物名称" prop="name">
+                <el-input v-model="pet.name" placeholder="请输入宠物名称"></el-input>
+            </el-form-item>
+            <el-form-item label="宠物颜色" prop="color">
+                <el-input v-model="pet.color" placeholder="请输入颜色名称"></el-input>
+            </el-form-item>
+            <el-form-item label="收养时间" prop="adoptTime">
+                <el-date-picker
+                        v-model="pet.adoptTime"
+                        type="date"
+                        placeholder="选择收养日期">
+                </el-date-picker>
+            </el-form-item>
+            <el-form-item label="备注" prop="remark">
+                <el-input
+                        type="textarea"
+                        :rows="2"
+                        placeholder="请输入备注，并控制在80个汉字以内"
+                        v-model="pet.remark">
+                </el-input>
+            </el-form-item>
+            <el-form-item label="宠物照片" prop="picture">
+                <el-upload
+                        class="upload-demo"
+                        action="/pet/upload/picture"
+                        :on-preview="handlePreview"
+                        :on-remove="handleRemove"
+                        :on-success="handleSuccess"
+                        :file-list="fileList"
+                        list-type="picture">
+                    <el-button size="small" type="primary">点击上传</el-button>
+                    <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过10M</div>
+                </el-upload>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="save()" style="text-align: center">保存</el-button>
+                <el-button @click="clearAll()" style="text-align: center">重置</el-button>
+            </el-form-item>
+        </el-form>
+    </div>
+</div>
+<br/><br/><br/><br/>
+<script src="lib/layui/layui.js" charset="utf-8"></script>
+<script src="js/x-layui.js" charset="utf-8"></script>
+<script src="/js/vue.js" charset="utf-8"></script>
+<script src="/js/index.js"></script>
+<script src="/js/axios.js" charset="utf-8"></script>
+<script type="text/javascript">
+    var app = new Vue({
+        el: "#app",
+        data: {
+            title: "添加宠物",
+            pet: {picture: "", id: ""},
+            fileList: [],
+            rules: {
+                ownerName: [
+                    {required: true, message: '请输入人员姓名', trigger: 'blur'},
+                ],
+                name: [
+                    {required: true, message: '请输入宠物名称', trigger: 'blur'},
+                ],
+                color: [
+                    {required: true, message: '请输入颜色名称', trigger: 'blur'}
+                ],
+                remark: [
+                    {required: false, message: '请输入备注', trigger: 'blur'},
+                    { max: 160, message: '备注长度大于80个汉字', trigger: 'blur'}
+                ]
+            }
+        },
+        methods: {
+            // 1.上传图片成功后的方法
+            handleSuccess(response) {
+                this.pet.picture = response.data;
+                if (response.data.result) {
+                    this.$message({
+                        message: '上传成功！',
+                        type: 'success'
+                    });
+                }
+            },
+            // 2.删除上传图片的方法
+            handleRemove() {
+                axios.get("/pet/delete/picture?petPicture=" + this.pet.picture).then((response) => {
+                    app.pet.picture = "";
+                    if (response.data.result) {
+                        app.fileList = [];
+                        this.$message({
+                            message: '图片删除成功！',
+                            type: 'success'
+                        });
+                    } else {
+                        this.$message({
+                            message: '图片删除失败！' + response.message,
+                            type: 'error'
+                        });
+                    }
+                });
+            },
+            // 3.保存宠物信息的方法
+            save() {
+                var method = "";
+
+                // 3.1 判断是否有宠物id，执行添加/修改方法
+                if (this.pet.id != null) {
+                    method = "update"
+                } else {
+                    method = "add"
+                }
+                // 3.2 发送 axios请求
+                axios.post("/pet/" + method, this.pet).then((response) => {
+                    if (response.data.result) {
+                        this.$message({
+                            message: '保存成功！',
+                            type: 'success'
+                        });
+                    } else {
+                        this.$message({
+                            message: '保存失败！' + response.message,
+                            type: 'error'
+                        });
+                    }
+                });
+            },
+            // 4.根据 id 获取宠物对象
+            findById() {
+                axios.get("/pet/get/by/id?id=" + this.pet.id).then((response) => {
+                    this.pet = response.data.data;
+                    this.fileList.push({url: "http://" + this.pet.picture});
+                });
+            },
+            // 5.根据参数名 获取参数
+            getQueryString(name) {
+                let reg = `(^|&)${name}=([^&]*)(&|$)`
+                let r = window.location.search.substr(1).match(reg);
+                if (r != null) return unescape(r[2]);
+                return null;
+            },
+            handlePreview(file) {
+                console.log(file);
+            },
+            handleExceed(files, fileList) {
+                this.$message.warning(`当前限制选择 1 个文件，本次选择了 ${files.length} 个文件，共选择了 ${files.length + fileList.length} 个文件`);
+            },
+            //文件删除提示
+            beforeRemove(file, fileList) {
+                return this.$confirm(`确定移除 ${file.name}？`);
+            },
+            //表达重置
+            clearAll() {
+                this.$refs.petFormRef.resetFields();
+                if (this.fileList.length > 0) {
+                    this.handleRemove();
+                }
+            },
+            imgUrl() {
+                return "http://" + app.pet.picture;
+            }
+        },
+        created: function () {
+            layui.use(['element', 'layer', 'form'], function () {
+                $ = layui.jquery;//jquery
+                lement = layui.element();//面包导航
+                layer = layui.layer;//弹出层
+                form = layui.form();
+                okLoading.close($);
+            });
+
+            // 1.获取父页面传递的 id参数
+            this.pet.id = this.getQueryString("id");
+
+            // 2.如果id不为空，则执行查询宠物对象方法，进行数据回显
+            if (this.pet.id != null && this.pet.id != '') {
+                this.title = "修改宠物";
+                this.findById();
+            }
+        }
+    });
+</script>
+</body>
+</html>

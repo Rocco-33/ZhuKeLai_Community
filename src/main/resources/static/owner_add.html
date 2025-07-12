@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>
+        添加人员
+    </title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="/css/main.css" media="all">
+    <script type="text/javascript" src="/lib/loading/okLoading.js"></script>
+    <!-- 引入ElementUI样式 -->
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+<div id="app">
+    <div class="x-nav">
+            <span class="layui-breadcrumb">
+              <a><cite>首页</cite></a>
+              <a><cite>业主信息管理</cite></a>
+              <a><cite>{{title}}</cite></a>
+            </span>
+        <a class="layui-btn layui-btn-small" style="line-height:1.6em;margin-top:3px;float:right"
+           href="javascript:location.replace(location.href);" title="刷新"><i class="layui-icon" style="line-height:30px">ဂ</i></a>
+    </div>
+    <div class="x-body">
+        <el-form :model="owner" :rules="rules" ref="ownerFormRef" label-width="120px" class="demo-ruleForm">
+            <el-form-item label="所属小区" prop="communityName">
+                <el-input v-model="owner.communityName" placeholder="请输入小区名称"></el-input>
+            </el-form-item>
+            <el-form-item label="所属房产" prop="houseName">
+                <el-input v-model="owner.houseName" placeholder="请输入房产名称"></el-input>
+            </el-form-item>
+            <el-form-item label="成员姓名" prop="name">
+                <el-input v-model="owner.name" placeholder="请输入人员姓名"></el-input>
+            </el-form-item>
+            <el-form-item label="身份证号" prop="idcard">
+                <el-input v-model="owner.idcard" placeholder="请输入18位身份证号"></el-input>
+            </el-form-item>
+            <el-form-item label="出生时间" prop="birthday">
+                <el-date-picker
+                        v-model="owner.birthday"
+                        type="date"
+                        placeholder="选择出生日期">
+                </el-date-picker>
+            </el-form-item>
+            <el-form-item label="联系方式" prop="telephone">
+                <el-input v-model="owner.telephone" placeholder="请输入电话号码"></el-input>
+            </el-form-item>
+            <el-form-item label="职业" prop="profession">
+                <el-input v-model="owner.profession" placeholder="请输入名称"></el-input>
+            </el-form-item>
+            <el-form-item label="性别" prop="sex">
+                <el-radio-group v-model="owner.sex">
+                    <el-radio label="0">男</el-radio>
+                    <el-radio label="1">女</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="成员类型" prop="type">
+                <el-radio-group v-model="owner.type">
+                    <el-radio label="0">业主</el-radio>
+                    <el-radio label="1">租户</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="成员照片" prop="picture">
+                <el-upload
+                        class="upload-demo"
+                        action="/owner/upload/picture"
+                        :on-preview="handlePreview"
+                        :on-remove="handleRemove"
+                        :on-success="handleSuccess"
+                        :file-list="fileList"
+                        list-type="picture">
+                    <el-button size="small" type="primary">点击上传</el-button>
+                    <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过10M</div>
+                </el-upload>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="save()" style="text-align: center">保存</el-button>
+                <el-button @click="clearAll()" style="text-align: center">重置</el-button>
+            </el-form-item>
+        </el-form>
+    </div>
+</div>
+<br/><br/><br/><br/>
+<script src="lib/layui/layui.js" charset="utf-8"></script>
+<script src="js/x-layui.js" charset="utf-8"></script>
+<script src="/js/vue.js" charset="utf-8"></script>
+<script src="/js/index.js"></script>
+<script src="/js/axios.js" charset="utf-8"></script>
+<script type="text/javascript">
+    var app = new Vue({
+        el: "#app",
+        data: {
+            title: "添加人员",
+            owner: {picture: "", id: ""},
+            fileList: [],
+            rules: {
+                communityName: [
+                    {required: true, message: '请输入小区名称', trigger: 'blur'},
+                ],
+                houseName: [
+                    {required: true, message: '请输入房产名称', trigger: 'blur'},
+                ],
+                name: [
+                    {required: true, message: '请输入成员姓名', trigger: 'blur'}
+                ],
+                idcard: [
+                    {required: true, message: '请输入身份证号码', trigger: 'blur'}
+                ],
+                birthday: [
+                    {required: true, message: '请选择出生日期', trigger: 'blur'}
+                ],
+                telephone: [
+                    {required: true, message: '请输入联系方式', trigger: 'blur'}
+                ],
+                profession: [
+                    {required: true, message: '请输入职业', trigger: 'blur'},
+                ]
+            }
+        },
+        methods: {
+            // 1.上传图片成功后的方法
+            handleSuccess(response) {
+                this.owner.picture = response.data;
+                if (response.data.result) {
+                    this.$message({
+                        message: '上传成功！',
+                        type: 'success'
+                    });
+                }
+            },
+            // 2.删除上传图片的方法
+            handleRemove() {
+                axios.get("/owner/delete/picture?ownerPicture=" + this.owner.picture).then((response) => {
+                    app.owner.picture = "";
+                    if (response.data.result) {
+                        app.fileList = [];
+                        this.$message({
+                            message: '图片删除成功！',
+                            type: 'success'
+                        });
+                    } else {
+                        this.$message({
+                            message: '图片删除失败！' + response.message,
+                            type: 'error'
+                        });
+                    }
+                });
+            },
+            // 3.保存人员信息的方法
+            save() {
+                var method = "";
+
+                // 3.1 判断是否有人员id，执行添加/修改方法
+                if (this.owner.id != null) {
+                    method = "update"
+                } else {
+                    method = "add"
+                }
+                // 3.2 发送 axios请求
+                axios.post("/owner/" + method, this.owner).then((response) => {
+                    if (response.data.result) {
+                        this.$message({
+                            message: '保存成功！',
+                            type: 'success'
+                        });
+                    } else {
+                        this.$message({
+                            message: '保存失败！' + response.message,
+                            type: 'error'
+                        });
+                    }
+                });
+            },
+            // 4.根据 id 获取人员对象
+            findById() {
+                axios.get("/owner/get/by/id?id=" + this.owner.id).then((response) => {
+                    this.owner = response.data.data;
+                    this.fileList.push({url: "http://" + this.owner.picture});
+                });
+            },
+            // 5.根据参数名 获取参数
+            getQueryString(name) {
+                let reg = `(^|&)${name}=([^&]*)(&|$)`
+                let r = window.location.search.substr(1).match(reg);
+                if (r != null) return unescape(r[2]);
+                return null;
+            },
+            handlePreview(file) {
+                console.log(file);
+            },
+            handleExceed(files, fileList) {
+                this.$message.warning(`当前限制选择 1 个文件，本次选择了 ${files.length} 个文件，共选择了 ${files.length + fileList.length} 个文件`);
+            },
+            //文件删除提示
+            beforeRemove(file, fileList) {
+                return this.$confirm(`确定移除 ${file.name}？`);
+            },
+            //表达重置
+            clearAll() {
+                this.$refs.ownerFormRef.resetFields();
+                if (this.fileList.length > 0) {
+                    this.handleRemove();
+                }
+            },
+            imgUrl() {
+                return "http://" + app.owner.picture;
+            }
+        },
+        created: function () {
+            layui.use(['element', 'layer', 'form'], function () {
+                $ = layui.jquery;//jquery
+                lement = layui.element();//面包导航
+                layer = layui.layer;//弹出层
+                form = layui.form();
+                okLoading.close($);
+            });
+
+            // 1.获取父页面传递的 id参数
+            this.owner.id = this.getQueryString("id");
+
+            // 2.如果id不为空，则执行查询人员对象方法，进行数据回显
+            if (this.owner.id != null && this.owner.id != '') {
+                this.title = "修改人员";
+                this.findById();
+            }
+        }
+    });
+</script>
+</body>
+</html>

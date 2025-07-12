@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>
+        报修列表
+    </title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="css/main.css" media="all">
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <!-- 导入ElementUI样式列表 -->
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+<div class="x-nav">
+            <span class="layui-breadcrumb">
+              <a><cite>首页</cite></a>
+              <a><cite>服务管理</cite></a>
+              <a><cite>报修列表</cite></a>
+            </span>
+    <a class="layui-btn layui-btn-small" style="line-height:1.6em;margin-top:3px;float:right"
+       href="javascript:location.replace(location.href);" title="刷新"><i class="layui-icon" style="line-height:30px">ဂ</i></a>
+</div>
+<div class="x-body" id="app">
+    <div style="text-align: center">
+        <span class="demonstration"></span>
+        <el-date-picker
+                @change="dateChange"
+                v-model="selectDate"
+                type="daterange"
+                range-separator="-"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                :picker-options="pickerOptions">
+        </el-date-picker>
+        <span class="demonstration"></span>
+        <el-input v-model="searchMap.name" style="width: 20%" placeholder="请输入报修项目" clearable></el-input>
+        <el-button type="primary" icon="el-icon-search" plain @click="searchMap.pageNum=1;search()">搜索</el-button>
+    </div>
+    <br>
+    <div style="display:block;margin-bottom:10px;padding:5px;line-height:22px;border-radius:0 2px 2px 0;background-color:#f2f2f2">
+        <button class="layui-btn layui-btn-normal" @click="admin_add('添加','repair_add.html','1000','600')"><i class="layui-icon">&#xe61f;</i> 添加</button>
+        <span style="line-height:40px">共有数据：<span class="layui-badge layui-bg-gray">{{repairList.length}}</span> 条</span>
+        <button class="x-right layui-btn layui-btn-danger" @click="deleteAll()"><i class="layui-icon">&#xe640;</i>批量删除</button>
+    </div>
+    <table class="layui-table">
+        <thead>
+        <tr>
+            <th>
+                <input type="checkbox" id="allChecked" :checked="checkedIDs.length===repairList.length" @click="allChecked">
+            </th>
+            <th>ID</th>
+            <th>报修项目</th>
+            <th>报修描述</th>
+            <th>报修人员</th>
+            <th>所属小区</th>
+            <th>创建时间</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody id="x-img">
+        <tr v-for="(repair,index) in repairList">
+            <td>
+                <input type="checkbox" :id="'id'+repair.id" :value="repair.id" v-model="checkedIDs">
+            </td>
+            <td>{{repair.id}}</td>
+            <td>{{repair.deviceName}}</td>
+            <td>{{repair.description}}</td>
+            <td>{{repair.ownerName}}</td>
+            <td>{{repair.communityName}}</td>
+            <td>{{dateFormat(repair.createTime)}}</td>
+            <td class="td-status">
+                <span v-if="repair.status == '0'">
+                    <el-button icon="el-icon-warning" type="warning" round>未受理</el-button>
+                </span>
+                <span v-if="repair.status == '1'">
+                    <el-button icon="el-icon-success" type="success" round>已受理</el-button>
+                </span>
+            </td>
+            <td class="td-manage">
+                <a title="编辑" href="javascript:" @click="admin_edit('编辑','repair_add.html',repair.id,'1000','600')" class="ml-5" style="text-decoration:none">
+                    <i class="layui-icon">&#xe642;</i>
+                </a>
+                <a title="删除" href="javascript:" @click="delete_one(repair.id)" style="text-decoration:none">
+                    <i class="layui-icon">&#xe640;</i>
+                </a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <el-pagination
+            background
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            :page-size="searchMap.pageSize"
+            layout="prev, pager, next, sizes"
+            :page-sizes="[2,10,20]"
+            :total="total"
+            style="text-align: center;">
+    </el-pagination>
+    <br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>
+</div>
+<script type="text/javascript" src="lib/loading/okLoading.js"></script>
+<script src="/lib/layui/layui.js" charset="utf-8"></script>
+<script src="/js/vue.js" charset="utf-8"></script>
+<script src="/js/index.js" charset="utf-8"></script>
+<script src="/js/axios.js" charset="utf-8"></script>
+<script src="/js/moment.min.js" charset="utf-8"></script>
+<script>
+    var app = new Vue({
+        el: "#app", //声明当前Vue在页面的作用域
+        data: {
+            checkedIDs: [],
+            repairList: [],
+            searchMap: {
+                "startTime": "",
+                "endTime": "",
+                "name": "",
+                "pageNum": 1,
+                "pageSize": 10
+            },
+            total: 10,
+            selectDate: ['', ''],
+            pickerOptions: {
+                shortcuts: [{
+                    text: '最近一周',
+                    onClick(picker) {
+                        const end = new Date();
+                        const start = new Date();
+                        start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+                        picker.$emit('pick', [start, end]);
+                    }
+                }, {
+                    text: '最近一个月',
+                    onClick(picker) {
+                        const end = new Date();
+                        const start = new Date();
+                        start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
+                        picker.$emit('pick', [start, end]);
+                    }
+                }, {
+                    text: '最近三个月',
+                    onClick(picker) {
+                        const end = new Date();
+                        const start = new Date();
+                        start.setTime(start.getTime() - 3600 * 1000 * 24 * 90);
+                        picker.$emit('pick', [start, end]);
+                    }
+                }]
+            }
+        },
+        methods: {
+            // 1.查询方法：发送 axios请求，获取所有查询的报修信息
+            search() {
+                // 清空选中的 id数组
+                this.checkedIDs = [];
+                axios.post("/repair/get/all/by/search", this.searchMap)
+                    .then((response) => {
+                        this.repairList = response.data.data;
+                        this.total = response.data.total;
+                    });
+            },
+            // 2.时间区间改变方法，searchMap中时间区间条件也要变化
+            dateChange() {
+                // 2.1 没有选择时间区间或者清理时间条件，当前时间区间为空字符串
+                if (this.selectDate === null || this.selectDate.length === 0) {
+                    this.searchMap.startTime = '';
+                    this.searchMap.endTime = '';
+                } else {
+                    // 2.2 当时间区间不为空，往searchMap中添加条件
+                    if (this.selectDate[0] != null && this.selectDate[0] !== '') {
+                        this.searchMap.startTime = this.dateFormat(this.selectDate[0]);
+                    }
+                    if (this.selectDate[1] != null && this.selectDate[1] !== '') {
+                        this.searchMap.endTime = this.dateFormat(this.selectDate[1]);
+                    }
+                }
+            },
+            // 3.日期格式化方法（date:要格式化的日期；format:格式）
+            dateFormat(date, format) {
+                // 3.1 无指定格式，则设置默认格式
+                if (format == null || format === '') {
+                    format = "YYYY-MM-DD HH:mm:ss";
+                }
+                return moment(date).format(format);
+            },
+            // 4.每页数量发生变化后触发的方法（pageSize:页面要显示的数量）
+            handleSizeChange(pageSize) {
+                this.searchMap.pageSize = pageSize;
+                this.search();
+            },
+            // 5.页码变化触发方法（pageNum:页码）
+            handleCurrentChange(pageNum) {
+                this.searchMap.pageNum = pageNum;
+                this.search();
+            },
+            // 6.单个删除信息方法（id:报修id）
+            delete_one(id) {
+                this.$confirm('请问您是否要删除该报修信息?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    // 6.1 把选中的 id 加入到数组
+                    this.checkedIDs.push(id);
+                    // 6.2 发送 axios请求，执行删除操作
+                    axios.post("/repair/delete", this.checkedIDs).then((response) => {
+                        if (response.data.result) {
+                            this.$message({
+                                type: 'success',
+                                message: '删除成功！'
+                            });
+                        } else {
+                            this.$message({
+                                type: 'error',
+                                message: '删除失败！' + response.data.message
+                            });
+                        }
+                        app.search(); //刷新当前页面
+                    });
+                }).catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    });
+                });
+            },
+            // 7.多个删除信息方法
+            deleteAll() {
+                this.$confirm('请问您是否要删除选中报修信息?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    // 7.1 发送 axios请求，执行删除操作
+                    axios.post("/repair/delete", this.checkedIDs).then((response) => {
+                        if (response.data.result) {
+                            this.$message({
+                                type: 'success',
+                                message: '删除成功！'
+                            });
+                        } else {
+                            this.$message({
+                                type: 'error',
+                                message: '删除失败！' + response.data.message
+                            });
+                        }
+                        app.search(); //刷新当前页面
+                    });
+                }).catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    });
+                });
+            },
+            // 7.多选框方法
+            allChecked() {
+                if (this.checkedIDs.length === this.repairList.length) {
+                    // 全不选
+                    this.checkedIDs = [];
+                } else {
+                    this.checkedIDs = [];
+                    // 全选
+                    this.repairList.forEach((item) => {
+                        this.checkedIDs.push(item.id); // 与checkbox的value统一
+                    })
+                }
+            },
+            // 访问图片路径的方法
+            urlImg(url) {
+                return "http://" + url;
+            },
+
+            /* --- LayUI 方法 --- */
+
+            // 1.点击添加
+            admin_add(title, url, w, h) {
+                this.x_admin_show(title, url, w, h);
+            },
+            // 2.点击编辑
+            admin_edit(title, url, id, w, h) {
+                url = url + "?id=" + id;
+                this.x_admin_show(title, url, w, h);
+            },
+            // 3.显示添加/编辑页面
+            x_admin_show(title, url, width, height) {
+
+                // E.检查 参数是否有效
+                if (title == null || title === '') title = false;
+                if (url == null || url === '') url = "404.html";
+                if (width == null || width === '') width = 800;
+                if (height == null || height === '') height = ($(window).height() - 50);
+
+                // 弹出页面
+                layer.open({
+                    "type": 2,
+                    "area": [width + 'px', height + 'px'],
+                    "fix": false, //不固定
+                    "maxmin": true,
+                    "shadeClose": true,
+                    "shade": 0.4,
+                    "title": title,
+                    "content": url,
+                    "cancel": function (index, layero) {
+                        //使用右上角x关闭弹窗层，执行回调方法，重新加载页面数据
+                        app.search();
+                    }
+                });
+            },
+            // 4.关闭添加/编辑页面
+            x_admin_close() {
+                var index = parent.layer.getFrameIndex(window.name);
+                parent.layer.close(index);
+            }
+        },
+        // Vue生命周期方法，加载页面时会执行该方法
+        created: function () {
+            layui.use(['laydate', 'element', 'laypage', 'layer'], function () {
+                $ = layui.jquery;//jquery
+                layer = layui.layer;//弹出层
+                okLoading.close($);
+                layer.ready(function () { //为了layer.ext.js加载完毕再执行
+                    layer.photos({
+                        photos: '#x-img'
+                    });
+                });
+            });
+            // 执行 search 方法
+            this.search();
+        }
+    });
+
+</script>
+
+</body>
+</html>

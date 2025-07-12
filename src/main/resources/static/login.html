@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>系统登录</title>
+    <link rel="stylesheet" href="css/login.css">
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script src="lib/layui/layui.js" charset="utf-8"></script>
+
+</head>
+<body class="login-bg">
+
+<div class="login">
+    <img src="images/logo2.svg" class="logo" width="183px">
+    <div class="message">用户登录</div>
+    <div id="darkbannerwrap"></div>
+
+    <form action="/admin/do/login" method="post" class="layui-form">
+        <i class="layui-icon">&#xe66f;</i>
+        <input name="username" placeholder="用户名" type="text" class="layui-input">
+        <hr class="hr15">
+        <i class="layui-icon">&#xe673;</i>
+        <input name="password" placeholder="密码" type="password" class="layui-input">
+        <hr class="hr15">
+        <div class="checkbox" style="text-align:right;"><a href="/register.html">我要注册</a></div><br/>
+        <input value="登录" lay-submit lay-filter="login" style="width:100%;" type="submit">
+        <hr class="hr20">
+    </form>
+</div>
+
+</body>
+</html>
